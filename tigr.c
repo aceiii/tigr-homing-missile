@@ -2902,8 +2902,8 @@ void tigrInitOSX()
 	((void (*)(id, SEL, NSInteger))objc_msgSend)(NSApp, sel_registerName("setActivationPolicy:"), 0);
 
 	Class appDelegateClass = objc_allocateClassPair((Class)objc_getClass("NSObject"), "AppDelegate", 0);
-	bool resultAddProtoc = class_addProtocol(appDelegateClass, objc_getProtocol("NSApplicationDelegate"));
-	assert(resultAddProtoc);
+	// bool resultAddProtoc = class_addProtocol(appDelegateClass, objc_getProtocol("NSApplicationDelegate"));
+	// assert(resultAddProtoc);
 	bool resultAddMethod = class_addMethod(appDelegateClass, sel_registerName("applicationShouldTerminate:"), (IMP)applicationShouldTerminate, NSUIntegerEncoding "@:@");
 	assert(resultAddMethod);
 	id dgAlloc = objc_msgSend_id((id)appDelegateClass, sel_registerName("alloc"));
