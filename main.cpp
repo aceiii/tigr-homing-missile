@@ -10,7 +10,7 @@
 namespace {
     const int screen_width {800};
     const int screen_height {600};
-    const int window_flags = TIGR_FIXED;
+    const int window_flags = TIGR_AUTO | TIGR_RETINA;
     const char *window_title = "Homing missiles!!11";
 
     Tigr *window {nullptr};
@@ -277,6 +277,8 @@ void updateFPS(float dt) {
 }
 
 void updateMouse(float dt) {
+    std::cout << "test" << dt << "\n";
+
     tigrMouse(window, &mouse_x, &mouse_y, &mouse_buttons);
 
     if (mousePressed(1) || mouse_buttons & 4) {
