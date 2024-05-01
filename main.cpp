@@ -9,9 +9,13 @@
 
 
 namespace {
+    const int font_size = 10;
     const int screen_width {800};
     const int screen_height {600};
     const char *window_title = "Homing missiles!!11";
+
+    RenderTexture2D screen;
+    Sound explode_sound;
 
     bool debug {false};
 
@@ -38,9 +42,15 @@ void init() {
     InitWindow(screen_width, screen_height, window_title);
     InitAudioDevice();
     SetExitKey(KEY_ESCAPE);
+    SetTargetFPS(60);
+
+    screen = LoadRenderTexture(screen_width, screen_height);
+    explode_sound = LoadSound("explode.wav");
 }
 
 void shutdown() {
+    UnloadSound(explode_sound);
+    UnloadRenderTexture(screen);
     CloseAudioDevice();
     CloseWindow();
 }
@@ -65,20 +75,6 @@ void fireMissile() {
     m.velocity.setDistance(velocity + rand_v);
 
     missiles.push_back(m);
-}
-
-bool mousePressed(int button) {
-    static int mouse_down {0};
-
-    if ((mouse_down & button) && !(mouse_buttons & button)) {
-        mouse_down &= ~button;
-    }
-    else if (!(mouse_down & button) && (mouse_buttons & button)) {
-        mouse_down |= button;
-        return true;
-    }
-
-    return false;
 }
 
 void explode(const vec2_t &pos, float dt) {
@@ -114,8 +110,8 @@ bool updateMissile(missile_t &m, float dt) {
     static const float turn_radius = 200.0f;
     static const float dead_time = 2.0f;
 
-    const int target_x = mouse_x - screen_x;
-    const int target_y = mouse_y - screen_y;
+    const int target_x = mouse_x;
+    const int target_y = mouse_y;
 
     m.life -= dt;
 
@@ -141,6 +137,7 @@ bool updateMissile(missile_t &m, float dt) {
     diff.subtract(m.position);
 
     if (diff.distanceSquared() <= 5.0f) {
+        PlaySound(explode_sound);
         explode(m.position, dt);
         shakeScreen(dt);
         return false;
@@ -308,9 +305,9 @@ void update(float dt) {
 
 void drawMissile(const missile_t &m) {
     static const auto live_color =  Color { 255, 255, 0, 255 };
-    static const auto dead_color = Color { 37, 221, 245 };
-    static const auto line_color = Color { 192, 192, 192 };
-    static const auto text_color = Color { 255, 255, 255 };
+    static const auto dead_color = Color { 37, 221, 245, 255 };
+    static const auto line_color = Color { 192, 192, 192, 255 };
+    static const auto text_color = Color { 255, 255, 255, 255 };
 
     static const int w = 4;
     static const int h = 4;
@@ -325,8 +322,8 @@ void drawMissile(const missile_t &m) {
 
     const Color color = m.life < 0.0f ? dead_color : live_color;
 
-    // tigrFill(screen, x - (w / 2), y - (h / 2), w, h, color);
-    // tigrLine(screen, x, y, x + int(v.x), y + int(v.y), line_color);
+    DrawRectangle(x - (w / 2), y - (h / 2), w, h, color);
+    DrawLine(x, y, x + int(v.x), y + int(v.y), line_color);
 
     if (!debug) {
         return;
@@ -344,7 +341,7 @@ void drawMissile(const missile_t &m) {
              radToDeg(m.velocity.angle()),
              radToDeg(t.angle()));
 
-    // tigrPrint(screen, tfont, x + margin, y + margin, text_color, text);
+    DrawText(text, x + margin, y + margin, font_size, text_color);
 }
 
 void drawMissiles() {
@@ -363,7 +360,7 @@ void drawMissileParticle(const missile_particle_t &p) {
     const int x = int(p.position.x);
     const int y = int(p.position.y);
 
-    // tigrRect(screen, x - (w / 2), y - (h / 2), w, h, color);
+    DrawRectangle(x - (w / 2), y - (h / 2), w, h, color);
 }
 
 void drawMissleParticles() {
@@ -390,14 +387,15 @@ void drawExplosionParticle(const explosion_particle_t &p) {
     const int x2 = int(v.x);
     const int y2 = int(v.y);
 
-    // tigrLine(screen, x1, y1, x2, y2, color);
+    DrawLine(x1, y1, x2, y2, color);
 
     const int w = 2;
     const int h = w;
     const int x = x1 - (w / 2);
     const int y = y1 - (h / 2);
 
-    // tigrRect(screen, x, y, w, h, tigrRGB(190, 120, 0));
+    DrawRectangle(x + screen_width, y + screen_height, w, h, Color { 190, 120, 0, 255 });
+
 }
 
 void drawExplosionParticles() {
@@ -409,11 +407,11 @@ void drawExplosionParticles() {
 void drawCrosshair() {
     static const auto color = Color { 123, 175, 201, 255 };
 
-    const int x = mouse_x - screen_x;
-    const int y = mouse_y - screen_y;
+    const int x = mouse_x;
+    const int y = mouse_y;
 
-    // tigrLine(screen, x, 0, x, screen_height, color);
-    // tigrLine(screen, 0, y, screen_width, y, color);
+    DrawLine(x, 0, x, screen_height, color);
+    DrawLine(0, y, screen_width, y, color);
 }
 
 void drawArrow() {
@@ -422,31 +420,31 @@ void drawArrow() {
     const int center_x = screen_width / 2;
     const int center_y = screen_height / 2;
 
-    const int target_x = mouse_x - screen_x;
-    const int target_y = mouse_y - screen_y;
+    const int target_x = mouse_x;
+    const int target_y = mouse_y;
 
     vec2_t v {float(target_x - center_x), float(target_y - center_y)};
     v.setDistance(24.0f);
 
-    // tigrLine(screen, center_x, center_y, center_x + int(v.x), center_y + int(v.y), color);
+    DrawLine(center_x, center_y, center_x + static_cast<int>(v.x), center_y + static_cast<int>(v.y), color);
 }
 
 void drawFPS() {
-    const auto color = Color { 255, 255, 255, 255 };
-    const int margin = 8;
+    static const auto color = Color { 255, 255, 255, 255 };
+    static const int margin = 8;
 
     char text[128];
     snprintf(text, sizeof(text), "% 4d ms/frame\n% 4d frames/sec", frame_time, fps);
 
-    // int width = tigrTextWidth(tfont, text);
-    // int height = tigrTextHeight(tfont, text);
+    int width = 100;
+    int height = 24;
 
-    // tigrPrint(window, tfont, screen_width - width - margin, screen_height - height - margin, color, text);
+    DrawText(text, screen_width - width - margin, screen_height - height - margin, font_size, color);
 }
 
 void drawParticleInfo() {
-    const auto color = Color { 255, 255, 255, 255 };
-    const int margin = 8;
+    static const auto color = Color { 255, 255, 255, 255 };
+    static const int margin = 8;
     const int m_count = (int)missiles.size();
     const int s_count = (int)missile_particles.size();
     const int p_count = (int)explosion_particles.size();
@@ -456,9 +454,7 @@ void drawParticleInfo() {
              "% 4d missiles\n% 4d smoke\n% 4d sparks",
              m_count, s_count, p_count);
 
-    // int height = tigrTextHeight(tfont, text);
-
-    // tigrPrint(window, tfont, margin, screen_height - height - margin, color, text);
+    DrawText(text, margin, screen_height - 40 - margin, font_size, color);
 }
 
 void drawMouseInfo() {
@@ -480,9 +476,9 @@ void drawMouseInfo() {
              "mouse position: (% 3d, %3d)\nmouse angle: % 3d deg\nbutton: % 3d",
              mouse_x, mouse_y, angle, mouse_buttons);
 
-    // int width = tigrTextWidth(tfont, text);
+    int width = MeasureText(text, font_size);
 
-    // tigrPrint(window, tfont, screen_width - width -margin, margin, color, text);
+    DrawText(text, screen_width - width - margin, margin, font_size, color);
 }
 
 void drawGrid() {
@@ -506,18 +502,16 @@ void drawGrid() {
             const int c = (i + j) % 2;
 
             if (c == 0) {
-                // tigrFill(screen, x, y, grid_size, grid_size, color);
+                DrawRectangle(x, y, grid_size, grid_size, color);
             }
         }
     }
 }
 
 void render() {
-    BeginDrawing();
-    ClearBackground(RAYWHITE);
 
-    // tigrClear(window, tigrRGB(64, 64, 64));
-    // tigrClear(screen, tigrRGB(127, 127, 127));
+    BeginTextureMode(screen);
+    ClearBackground({ 127, 127, 127, 255 });
 
     drawGrid();
 
@@ -525,10 +519,21 @@ void render() {
     drawExplosionParticles();
     drawMissiles();
 
+    EndTextureMode();
+    BeginDrawing();
+    ClearBackground({ 64, 64, 64, 255 });
+
+    DrawTexturePro(
+        screen.texture,
+        Rectangle { 0, 0, screen_width, -screen_height },
+        Rectangle { static_cast<float>(screen_x), static_cast<float>(screen_y), screen_width, screen_height },
+        Vector2 { 0, 0 },
+        0.0f,
+        WHITE
+    );
+
     drawCrosshair();
     drawArrow();
-
-    // tigrBlit(window, screen, screen_x, screen_y, 0, 0, screen_width, screen_width);
 
     drawFPS();
     drawParticleInfo();
