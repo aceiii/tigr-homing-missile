@@ -4,16 +4,18 @@ set(PROJECT_NAME tigr-test)
 
 project(${PROJECT_NAME})
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 set(SOURCE_FILES
     main.cpp
-    tigr.h tigr.c
-    vec2.h vec2.cpp
-    missiles.h missiles.cpp
-    random.h random.cpp)
+    vec2.cpp
+    missiles.cpp
+    random.cpp
+)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
+
+find_package(raylib CONFIG REQUIRED)
 
 if(APPLE)
     find_library(COCOA_LIBRARY Cocoa)
@@ -25,4 +27,4 @@ if(APPLE)
     #    MACOSX_BUNDLE TRUE)
 endif()
 
-target_link_libraries(${PROJECT_NAME} ${LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIBS} raylib)
