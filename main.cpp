@@ -1,7 +1,8 @@
 #include <iostream>
 #include <vector>
+#include <raylib.h>
+#include <spdlog/spdlog.h>
 
-#include "tigr.h"
 #include "vec2.h"
 #include "missiles.h"
 #include "random.h"
@@ -10,11 +11,7 @@
 namespace {
     const int screen_width {800};
     const int screen_height {600};
-    const int window_flags = TIGR_AUTO | TIGR_RETINA;
     const char *window_title = "Homing missiles!!11";
-
-    Tigr *window {nullptr};
-    Tigr *screen {nullptr};
 
     bool debug {false};
 
@@ -36,23 +33,16 @@ namespace {
     std::vector<explosion_particle_t> explosion_particles;
 }
 
-bool init() {
-    window = tigrWindow(screen_width, screen_height, window_title, window_flags);
-    screen = tigrBitmap(screen_width, screen_height);
-
-    return true;
-}
-
-void freeTigrPtr(Tigr *&ptr) {
-    if (ptr) {
-        tigrFree(ptr);
-        ptr = nullptr;
-    }
+void init() {
+    spdlog::info("Initializing interface");
+    InitWindow(screen_width, screen_height, window_title);
+    InitAudioDevice();
+    SetExitKey(KEY_ESCAPE);
 }
 
 void shutdown() {
-    freeTigrPtr(window);
-    freeTigrPtr(screen);
+    CloseAudioDevice();
+    CloseWindow();
 }
 
 void fireMissile() {
@@ -260,11 +250,7 @@ void updateExplosionParticles(float dt) {
 }
 
 bool processEvents() {
-    if (tigrKeyDown(window, TK_ESCAPE)) {
-        return false;
-    }
-
-    if (tigrKeyDown(window, 'D')) {
+    if (IsKeyDown(KEY_D)) {
         debug = !debug;
     }
 
@@ -277,15 +263,17 @@ void updateFPS(float dt) {
 }
 
 void updateMouse(float dt) {
-    std::cout << "test" << dt << "\n";
+    // std::cout << "test" << dt << "\n";
 
-    tigrMouse(window, &mouse_x, &mouse_y, &mouse_buttons);
+    Vector2 mouse_pos = GetMousePosition();
+    mouse_x = mouse_pos.x;
+    mouse_y = mouse_pos.y;
 
-    if (mousePressed(1) || mouse_buttons & 4) {
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
         fireMissile();
     }
 
-    if (mousePressed(2)) {
+    if (IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
         const int count = 32;
 
         for (int i = 0; i < count; i += 1) {
@@ -319,10 +307,10 @@ void update(float dt) {
 }
 
 void drawMissile(const missile_t &m) {
-    static const TPixel live_color = tigrRGB(255, 255, 0);
-    static const TPixel dead_color = tigrRGB(37, 221, 245);
-    static const TPixel line_color = tigrRGB(192, 192, 192);
-    static const TPixel text_color = tigrRGB(255, 255, 255);
+    static const auto live_color =  Color { 255, 255, 0, 255 };
+    static const auto dead_color = Color { 37, 221, 245 };
+    static const auto line_color = Color { 192, 192, 192 };
+    static const auto text_color = Color { 255, 255, 255 };
 
     static const int w = 4;
     static const int h = 4;
@@ -335,10 +323,10 @@ void drawMissile(const missile_t &m) {
     v.multiply({-1.0f, -1.0f});
     v.setDistance(16.0f);
 
-    const TPixel color = m.life < 0.0f ? dead_color : live_color;
+    const Color color = m.life < 0.0f ? dead_color : live_color;
 
-    tigrFill(screen, x - (w / 2), y - (h / 2), w, h, color);
-    tigrLine(screen, x, y, x + int(v.x), y + int(v.y), line_color);
+    // tigrFill(screen, x - (w / 2), y - (h / 2), w, h, color);
+    // tigrLine(screen, x, y, x + int(v.x), y + int(v.y), line_color);
 
     if (!debug) {
         return;
@@ -356,7 +344,7 @@ void drawMissile(const missile_t &m) {
              radToDeg(m.velocity.angle()),
              radToDeg(t.angle()));
 
-    tigrPrint(screen, tfont, x + margin, y + margin, text_color, text);
+    // tigrPrint(screen, tfont, x + margin, y + margin, text_color, text);
 }
 
 void drawMissiles() {
@@ -366,7 +354,7 @@ void drawMissiles() {
 }
 
 void drawMissileParticle(const missile_particle_t &p) {
-    const TPixel color = tigrRGB(178, 178, 178);
+    const auto color = Color { 178, 178, 178, 255 };
 
     const int min = 2;
     const int max = 8;
@@ -375,7 +363,7 @@ void drawMissileParticle(const missile_particle_t &p) {
     const int x = int(p.position.x);
     const int y = int(p.position.y);
 
-    tigrRect(screen, x - (w / 2), y - (h / 2), w, h, color);
+    // tigrRect(screen, x - (w / 2), y - (h / 2), w, h, color);
 }
 
 void drawMissleParticles() {
@@ -385,7 +373,7 @@ void drawMissleParticles() {
 }
 
 void drawExplosionParticle(const explosion_particle_t &p) {
-    const TPixel color = tigrRGB(255, 255, 255);
+    const auto color = Color { 255, 255, 255, 255 };
     const float length = clamp(p.velocity.distance() / 200.0f, 0.0f, 1.0f);
 
     vec2_t d;
@@ -402,14 +390,14 @@ void drawExplosionParticle(const explosion_particle_t &p) {
     const int x2 = int(v.x);
     const int y2 = int(v.y);
 
-    tigrLine(screen, x1, y1, x2, y2, color);
+    // tigrLine(screen, x1, y1, x2, y2, color);
 
     const int w = 2;
     const int h = w;
     const int x = x1 - (w / 2);
     const int y = y1 - (h / 2);
 
-    tigrRect(screen, x, y, w, h, tigrRGB(190, 120, 0));
+    // tigrRect(screen, x, y, w, h, tigrRGB(190, 120, 0));
 }
 
 void drawExplosionParticles() {
@@ -419,17 +407,17 @@ void drawExplosionParticles() {
 }
 
 void drawCrosshair() {
-    static const TPixel color = tigrRGB(123, 175, 201);
+    static const auto color = Color { 123, 175, 201, 255 };
 
     const int x = mouse_x - screen_x;
     const int y = mouse_y - screen_y;
 
-    tigrLine(screen, x, 0, x, screen_height, color);
-    tigrLine(screen, 0, y, screen_width, y, color);
+    // tigrLine(screen, x, 0, x, screen_height, color);
+    // tigrLine(screen, 0, y, screen_width, y, color);
 }
 
 void drawArrow() {
-    const TPixel color = tigrRGB(213, 246, 221);
+    const auto color = Color { 213, 246, 221, 255 };
 
     const int center_x = screen_width / 2;
     const int center_y = screen_height / 2;
@@ -440,24 +428,24 @@ void drawArrow() {
     vec2_t v {float(target_x - center_x), float(target_y - center_y)};
     v.setDistance(24.0f);
 
-    tigrLine(screen, center_x, center_y, center_x + int(v.x), center_y + int(v.y), color);
+    // tigrLine(screen, center_x, center_y, center_x + int(v.x), center_y + int(v.y), color);
 }
 
 void drawFPS() {
-    const TPixel color = tigrRGB(255, 255, 255);
+    const auto color = Color { 255, 255, 255, 255 };
     const int margin = 8;
 
     char text[128];
     snprintf(text, sizeof(text), "% 4d ms/frame\n% 4d frames/sec", frame_time, fps);
 
-    int width = tigrTextWidth(tfont, text);
-    int height = tigrTextHeight(tfont, text);
+    // int width = tigrTextWidth(tfont, text);
+    // int height = tigrTextHeight(tfont, text);
 
-    tigrPrint(window, tfont, screen_width - width - margin, screen_height - height - margin, color, text);
+    // tigrPrint(window, tfont, screen_width - width - margin, screen_height - height - margin, color, text);
 }
 
 void drawParticleInfo() {
-    const TPixel color = tigrRGB(255, 255, 255);
+    const auto color = Color { 255, 255, 255, 255 };
     const int margin = 8;
     const int m_count = (int)missiles.size();
     const int s_count = (int)missile_particles.size();
@@ -468,13 +456,13 @@ void drawParticleInfo() {
              "% 4d missiles\n% 4d smoke\n% 4d sparks",
              m_count, s_count, p_count);
 
-    int height = tigrTextHeight(tfont, text);
+    // int height = tigrTextHeight(tfont, text);
 
-    tigrPrint(window, tfont, margin, screen_height - height - margin, color, text);
+    // tigrPrint(window, tfont, margin, screen_height - height - margin, color, text);
 }
 
 void drawMouseInfo() {
-    const TPixel color = tigrRGB(255, 255, 255);
+    const auto color = Color { 255, 255, 255, 255 };
     const int margin = 8;
 
     const int mouse_window_x = mouse_x;
@@ -492,13 +480,13 @@ void drawMouseInfo() {
              "mouse position: (% 3d, %3d)\nmouse angle: % 3d deg\nbutton: % 3d",
              mouse_x, mouse_y, angle, mouse_buttons);
 
-    int width = tigrTextWidth(tfont, text);
+    // int width = tigrTextWidth(tfont, text);
 
-    tigrPrint(window, tfont, screen_width - width -margin, margin, color, text);
+    // tigrPrint(window, tfont, screen_width - width -margin, margin, color, text);
 }
 
 void drawGrid() {
-    static const TPixel color = tigrRGB(148, 148, 148);
+    static const auto color = Color { 148, 148, 148, 255 };
     static const int grid_size = 60;
 
     const int half_width = screen_width / 2;
@@ -518,15 +506,18 @@ void drawGrid() {
             const int c = (i + j) % 2;
 
             if (c == 0) {
-                tigrFill(screen, x, y, grid_size, grid_size, color);
+                // tigrFill(screen, x, y, grid_size, grid_size, color);
             }
         }
     }
 }
 
 void render() {
-    tigrClear(window, tigrRGB(64, 64, 64));
-    tigrClear(screen, tigrRGB(127, 127, 127));
+    BeginDrawing();
+    ClearBackground(RAYWHITE);
+
+    // tigrClear(window, tigrRGB(64, 64, 64));
+    // tigrClear(screen, tigrRGB(127, 127, 127));
 
     drawGrid();
 
@@ -537,24 +528,24 @@ void render() {
     drawCrosshair();
     drawArrow();
 
-    tigrBlit(window, screen, screen_x, screen_y, 0, 0, screen_width, screen_width);
+    // tigrBlit(window, screen, screen_x, screen_y, 0, 0, screen_width, screen_width);
 
     drawFPS();
     drawParticleInfo();
     drawMouseInfo();
 
-    tigrUpdate(window);
+    EndDrawing();
 }
 
 void run() {
     const double dt {0.01f};
     double accumulator {0.0f};
-    while (!tigrClosed(window)) {
+    while (!WindowShouldClose()) {
         if (!processEvents()) {
             break;
         }
 
-        float time = tigrTime();
+        float time = GetFrameTime();
         accumulator += time;
 
         updateFPS(time);
@@ -569,13 +560,8 @@ void run() {
 }
 
 int main() {
-    if (!init()) {
-        shutdown();
-        return 1;
-    }
-
+    init();
     run();
     shutdown();
-
     return 0;
 }
